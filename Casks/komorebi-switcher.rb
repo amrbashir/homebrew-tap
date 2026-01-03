@@ -15,6 +15,8 @@ cask "komorebi-switcher" do
 
   app "komorebi-switcher.app"
 
+  binary "#{appdir}/komorebi-switcher.app/Contents/MacOS/komorebi-switcher"
+
   postflight do
     system_command "/usr/bin/xattr", args: ["-d", "com.apple.quarantine", "#{appdir}/komorebi-switcher.app"]
     system_command "/usr/bin/codesign", args: ["--force", "--deep", "--sign", "-", "#{appdir}/komorebi-switcher.app"]
