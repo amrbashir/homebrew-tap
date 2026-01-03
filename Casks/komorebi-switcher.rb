@@ -14,4 +14,8 @@ cask "komorebi-switcher" do
   end
 
   app "komorebi-switcher.app"
+
+  postflight do
+    system_command "/usr/bin/codesign", args: ["--force", "--deep", "--sign", "-", "#{appdir}/komorebi-switcher.app"]
+  end
 end
