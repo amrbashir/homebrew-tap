@@ -5,7 +5,7 @@ cask "komorebi-switcher" do
   url "https://github.com/amrbashir/komorebi-switcher/releases/download/v#{version}/komorebi-switcher.dmg",
       verified: "github.com/amrbashir/komorebi-switcher/"
   name "komorebi-switcher"
-  desc "Minimal switcher for Komorebi tiling manager, integrated into the menu bar."
+  desc "Minimal switcher for Komorebi tiling manager, integrated into the menu bar"
   homepage "https://github.com/amrbashir/komorebi-switcher"
 
   livecheck do
@@ -14,7 +14,6 @@ cask "komorebi-switcher" do
   end
 
   app "komorebi-switcher.app"
-
   binary "#{appdir}/komorebi-switcher.app/Contents/MacOS/komorebi-switcher"
 
   postflight do
