@@ -5,7 +5,7 @@ cask "komorebi-switcher" do
   url "https://github.com/amrbashir/komorebi-switcher/releases/download/v#{version}/komorebi-switcher.dmg",
       verified: "github.com/amrbashir/komorebi-switcher/"
   name "komorebi-switcher"
-  desc "A minimal workspace switcher for the Komorebi tiling window manager, seamlessly integrated into Windows 10/11 taskbar or macOS menu bar."
+  desc "Minimal switcher for Komorebi tiling manager, integrated into macOS menu bar"
   homepage "https://github.com/amrbashir/komorebi-switcher"
 
   livecheck do
