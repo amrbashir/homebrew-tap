@@ -1,6 +1,6 @@
 cask "komorebi-switcher" do
-  version "0.10.1"
-  sha256 "f3f79d8a7dc8de1b5ca47d4adc733fb2afdf249f5d7e1aca225f9641aabddd03"
+  version "0.10.2"
+  sha256 "7b888689314d68ecb5845c2cb372072e9f41620e70f0ac84889efdd8496cb0bc"
 
   url "https://github.com/amrbashir/komorebi-switcher/releases/download/v#{version}/komorebi-switcher.dmg"
   name "komorebi-switcher"
