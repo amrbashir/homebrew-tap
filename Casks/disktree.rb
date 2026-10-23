@@ -15,7 +15,7 @@ cask "disktree" do
     strategy :github_latest
   end
 
-  depends_on macos: :big_sur
+  depends_on :macos
 
   app "disktree.app"
   binary "#{appdir}/disktree.app/Contents/MacOS/disktree"
