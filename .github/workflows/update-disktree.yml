@@ -1,0 +1,39 @@
+name: Update DiskTree
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "20 */4 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-disktree
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Update version and verify release downloads
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python .github/scripts/update-disktree.py
+      - name: Check cask syntax
+        run: ruby -c Casks/disktree.rb
+      - name: Commit and push update
+        run: |
+          if git diff --quiet -- Casks/disktree.rb; then
+            echo "DiskTree is already current"
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Casks/disktree.rb
+          git commit -m "Update DiskTree cask"
+          git push
