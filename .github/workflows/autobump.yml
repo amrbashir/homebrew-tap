@@ -1,0 +1,124 @@
+name: Autobump casks
+
+on:
+  schedule:
+    - cron: "20 */4 * * *"
+  workflow_dispatch:
+    inputs:
+      verify:
+        description: Exercise updates from temporary older versions without pushing
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/autobump.yml
+
+permissions: {}
+
+concurrency:
+  group: autobump-casks
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash -euo pipefail {0}
+
+jobs:
+  autobump:
+    if: github.ref == 'refs/heads/main'
+    runs-on: macos-26
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      actions: write
+    env:
+      HOMEBREW_GITHUB_API_TOKEN: ${{ github.token }}
+      VERIFY: ${{ inputs.verify || false }}
+    steps:
+      - name: Set up Homebrew
+        id: homebrew
+        uses: Homebrew/actions/setup-homebrew@4790763c0a3ba4036f72634dc079c4a7dfcd4878 # 2026.10.19.1
+        with:
+          token: ${{ github.token }}
+
+      - name: Cache Homebrew Bundler RubyGems
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ steps.homebrew.outputs.gems-path }}
+          key: autobump-rubygems-${{ steps.homebrew.outputs.gems-hash }}
+          restore-keys: autobump-rubygems-
+
+      - name: Check upstream versions
+        env:
+          TAP_NAME: ${{ steps.homebrew.outputs.tap-name }}
+        run: |
+          brew livecheck --cask --tap="$TAP_NAME" --full-name --json > "$RUNNER_TEMP/livecheck.json"
+          cat "$RUNNER_TEMP/livecheck.json"
+
+      - name: Update casks and validate downloads
+        env:
+          TAP_NAME: ${{ steps.homebrew.outputs.tap-name }}
+        run: |
+          ruby <<'RUBY'
+          require "json"
+
+          results = JSON.parse(File.read(File.join(ENV.fetch("RUNNER_TEMP"), "livecheck.json")))
+          raise "Unexpected livecheck output" unless results.is_a?(Array)
+
+          results.each do |entry|
+            name = entry.fetch("cask")
+            if ["skip", "skipped"].include?(entry["status"])
+              puts "Skipping #{name}: #{entry["messages"]}"
+              next
+            end
+            raise "Livecheck failed for #{name}: #{entry}" unless entry["version"].is_a?(Hash)
+
+            version = entry.fetch("version")
+            next if version["newer_than_upstream"]
+
+            target = version["latest_throttled"] || version.fetch("latest")
+            verify = ENV.fetch("VERIFY") == "true"
+            next unless verify || (version["outdated"] && target != version.fetch("current"))
+
+            # Match the name to a tracked cask before modifying or running anything.
+            path = Dir.glob("Casks/**/*.rb").find do |file|
+              name == "#{ENV.fetch("TAP_NAME")}/#{File.basename(file, ".rb")}"
+            end
+            raise "Unknown cask: #{name}" unless path
+
+            if verify
+              # Only the runner's checkout is changed; the commit step is disabled.
+              content = File.read(path)
+              count = content.scan(/^  version "[^"]+"$/).length
+              raise "Verification requires one shared version stanza: #{name}" unless count == 1
+              File.write(path, content.sub(/^  version "[^"]+"$/, '  version "0"'))
+            end
+
+            puts "Updating #{name} to #{target}"
+            # Validate separately so third-party casks use the same audits as CI.
+            raise "Bump failed: #{name}" unless system("brew", "bump-cask-pr", "--write-only", "--no-audit", "--version=#{target}", name)
+            raise "Audit failed: #{name}" unless system("brew", "audit", "--cask", name)
+            raise "Download verification failed: #{name}" unless system("brew", "fetch", "--cask", "--arch=all", name)
+          end
+          RUBY
+
+      - name: Validate tap syntax and style
+        run: brew test-bot --only-tap-syntax
+
+      - name: Commit updates and trigger CI
+        if: inputs.verify != true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- Casks; then
+            echo "All casks are current"
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Casks
+          git commit -m "Update casks from upstream releases"
+          git push origin HEAD:main
+          # Pushes with GITHUB_TOKEN do not trigger push workflows.
+          gh workflow run tests.yml --ref main

@@ -54,8 +54,11 @@ jobs:
       - name: Audit and fetch macOS casks
         if: runner.os == 'macOS'
         run: |
-          brew audit --cask amrbashir/tap/disktree amrbashir/tap/komorebi-switcher
-          brew fetch --cask amrbashir/tap/disktree amrbashir/tap/komorebi-switcher
+          find Casks -name '*.rb' -print0 | while IFS= read -r -d '' cask_file; do
+            cask="amrbashir/tap/$(basename "$cask_file" .rb)"
+            brew audit --cask "$cask"
+            brew fetch --cask "$cask"
+          done
       - run: brew test-bot --only-formulae
         if: github.event_name == 'pull_request'
 
