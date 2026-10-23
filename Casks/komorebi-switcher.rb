@@ -12,6 +12,8 @@ cask "komorebi-switcher" do
     strategy :github_latest
   end
 
+  depends_on :macos
+
   app "komorebi-switcher.app"
   binary "#{appdir}/komorebi-switcher.app/Contents/MacOS/komorebi-switcher"
 
